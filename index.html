@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Projeto escolar de indicador visual de intensidade sonora com Arduino Uno e sensor KY-038.">
+  <title>Equalizador de Som | Projeto Arduino</title>
+  <style>
+    :root {
+      --bg: #07111f; --panel: #101f33; --panel2: #142842;
+      --text: #eef5ff; --muted: #a9bad0; --cyan: #35d7e8;
+      --blue: #5796ff; --line: rgba(255,255,255,.11);
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0; font-family: Arial, Helvetica, sans-serif; color: var(--text);
+      background: radial-gradient(circle at 80% 0%, #12395a 0, transparent 35%), var(--bg);
+      line-height: 1.65;
+    }
+    a { color: inherit; text-decoration: none; }
+    .wrap { width: min(1080px, 90%); margin: auto; }
+    header { padding: 22px 0; border-bottom: 1px solid var(--line); }
+    nav { display:flex; justify-content:space-between; align-items:center; gap:20px; }
+    .brand { font-weight:800; letter-spacing:.5px; }
+    .brand span { color:var(--cyan); }
+    .navlinks { display:flex; flex-wrap:wrap; gap:18px; color:var(--muted); font-size:.92rem; }
+    .navlinks a:hover { color:var(--cyan); }
+    .hero { padding:85px 0 70px; display:grid; grid-template-columns:1.25fr .75fr; gap:35px; align-items:center; }
+    .tag { display:inline-block; color:var(--cyan); border:1px solid rgba(53,215,232,.35); background:rgba(53,215,232,.08); padding:6px 12px; border-radius:30px; font-size:.82rem; }
+    h1 { font-size:clamp(2.4rem,6vw,4.5rem); line-height:1.05; margin:20px 0; letter-spacing:-2px; }
+    h1 span { color:var(--cyan); }
+    .hero p { color:var(--muted); font-size:1.1rem; max-width:650px; }
+    .button { display:inline-block; margin-top:18px; background:var(--cyan); color:#06121e; font-weight:800; padding:12px 20px; border-radius:9px; }
+    .visual { background:linear-gradient(145deg,#153451,#0c1b2e); border:1px solid var(--line); border-radius:22px; padding:28px; box-shadow:0 25px 70px #0005; }
+    .visual small { color:var(--muted); }
+    .bars { height:175px; display:flex; align-items:end; justify-content:center; gap:12px; margin:25px 0 15px; }
+    .bar { width:15%; border-radius:8px 8px 3px 3px; background:linear-gradient(0deg,#267bff,var(--cyan)); box-shadow:0 0 18px #35d7e855; }
+    .bar:nth-child(1){height:28%}.bar:nth-child(2){height:45%}.bar:nth-child(3){height:65%}.bar:nth-child(4){height:82%}.bar:nth-child(5){height:100%}
+    .visual-label { display:flex; justify-content:space-between; color:var(--muted); font-size:.85rem; }
+    section { padding:58px 0; border-top:1px solid var(--line); }
+    .eyebrow { color:var(--cyan); text-transform:uppercase; letter-spacing:2px; font-size:.75rem; font-weight:800; }
+    h2 { font-size:clamp(1.8rem,4vw,2.5rem); margin:8px 0 18px; }
+    .intro { color:var(--muted); max-width:760px; }
+    .grid { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-top:28px; }
+    .card { background:var(--panel); border:1px solid var(--line); border-radius:15px; padding:22px; }
+    .card h3 { margin:0 0 8px; }
+    .card p, li { color:var(--muted); }
+    .number { color:var(--cyan); font-size:1.4rem; font-weight:800; }
+    .members { display:flex; flex-wrap:wrap; gap:10px; margin-top:22px; }
+    .member { background:var(--panel2); border:1px solid var(--line); padding:10px 15px; border-radius:30px; }
+    ul { padding-left:22px; }
+    .table-wrap { overflow-x:auto; margin-top:20px; }
+    table { border-collapse:collapse; width:100%; min-width:480px; background:var(--panel); border-radius:12px; overflow:hidden; }
+    th,td { padding:13px 15px; text-align:left; border-bottom:1px solid var(--line); }
+    th { color:var(--cyan); background:var(--panel2); }
+    td { color:var(--muted); }
+    code { color:#9cecf4; background:#071522; padding:3px 6px; border-radius:5px; }
+    .notice { border-left:4px solid var(--cyan); background:rgba(53,215,232,.08); padding:16px 18px; border-radius:0 10px 10px 0; color:var(--muted); margin-top:20px; }
+    .steps { counter-reset:step; display:grid; grid-template-columns:repeat(2,1fr); gap:14px; margin-top:25px; }
+    .step { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:18px; }
+    .step:before { counter-increment:step; content:counter(step, decimal-leading-zero); color:var(--cyan); font-weight:800; display:block; margin-bottom:7px; }
+    footer { padding:30px 0; color:var(--muted); text-align:center; border-top:1px solid var(--line); font-size:.9rem; }
+    @media(max-width:760px) {
+      .hero { grid-template-columns:1fr; padding:60px 0; }
+      .grid { grid-template-columns:1fr; }
+      .steps { grid-template-columns:1fr; }
+      nav { align-items:flex-start; flex-direction:column; }
+      .navlinks { gap:12px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <nav>
+        <a class="brand" href="#inicio">PROJETO<span> ARDUINO</span></a>
+        <div class="navlinks">
+          <a href="#sobre">Sobre</a><a href="#materiais">Materiais</a>
+          <a href="#montagem">Montagem</a><a href="#funcionamento">Funcionamento</a>
+          <a href="#equipe">Equipe</a>
+        </div>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <div class="wrap hero" id="inicio">
+      <div>
+        <span class="tag">Eletrônica • Arduino UNO • Sensor KY-038</span>
+        <h1>Equalizador de <span>Som</span></h1>
+        <p>Um projeto que transforma o som do ambiente em um sinal visual: quanto maior a intensidade sonora detectada, mais LEDs acendem.</p>
+        <a class="button" href="#sobre">Conheça o projeto ↓</a>
+      </div>
+      <div class="visual" aria-label="Ilustração de cinco barras de LEDs acesas em níveis crescentes">
+        <small>INDICADOR VISUAL DE SOM</small>
+        <div class="bars"><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div></div>
+        <div class="visual-label"><span>Som baixo</span><span>Som intenso</span></div>
+      </div>
+    </div>
+
+    <section id="sobre">
+      <div class="wrap">
+        <div class="eyebrow">01 — Apresentação</div>
+        <h2>Sobre o projeto</h2>
+        <p class="intro">O projeto utiliza um Arduino UNO e um sensor de som KY-038 para identificar variações na intensidade sonora. A partir da leitura do sensor, o Arduino controla cinco LEDs, que acendem progressivamente de acordo com o som captado.</p>
+        <div class="notice"><strong>Importante:</strong> apesar do nome, este protótipo é um indicador visual de intensidade sonora. Ele não separa graves, médios e agudos como um equalizador de áudio real.</div>
+      </div>
+    </section>
+
+    <section id="materiais">
+      <div class="wrap">
+        <div class="eyebrow">02 — Componentes</div>
+        <h2>Materiais utilizados</h2>
+        <div class="grid">
+          <article class="card"><div class="number">01</div><h3>Arduino UNO</h3><p>Controla o funcionamento do circuito e interpreta os dados do sensor.</p></article>
+          <article class="card"><div class="number">02</div><h3>Sensor KY-038</h3><p>Capta o som do ambiente e envia um sinal analógico ao Arduino.</p></article>
+          <article class="card"><div class="number">03</div><h3>5 LEDs</h3><p>Mostram visualmente os níveis de intensidade sonora detectados.</p></article>
+          <article class="card"><div class="number">04</div><h3>5 resistores</h3><p>Resistores de 220 Ω a 330 Ω, um para cada LED.</p></article>
+          <article class="card"><div class="number">05</div><h3>Protoboard e jumpers</h3><p>Permitem montar e conectar o circuito de forma organizada.</p></article>
+          <article class="card"><div class="number">06</div><h3>Cabo USB</h3><p>Conecta o Arduino ao computador para alimentação e programação.</p></article>
+        </div>
+      </div>
+    </section>
+
+    <section id="montagem">
+      <div class="wrap">
+        <div class="eyebrow">03 — Ligações</div>
+        <h2>Como o circuito é montado</h2>
+        <p class="intro">O sensor envia a leitura analógica pela entrada A0. Os cinco LEDs são controlados pelas portas digitais D2 a D6, cada um com seu próprio resistor em série.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Componente</th><th>Ligação no Arduino UNO</th></tr></thead>
+            <tbody>
+              <tr><td>KY-038 — VCC</td><td>5V</td></tr>
+              <tr><td>KY-038 — GND</td><td>GND</td></tr>
+              <tr><td>KY-038 — AO</td><td>A0</td></tr>
+              <tr><td>KY-038 — DO</td><td>Não conectar</td></tr>
+              <tr><td>LED 1, com resistor</td><td>D2</td></tr>
+              <tr><td>LED 2, com resistor</td><td>D3</td></tr>
+              <tr><td>LED 3, com resistor</td><td>D4</td></tr>
+              <tr><td>LED 4, com resistor</td><td>D5</td></tr>
+              <tr><td>LED 5, com resistor</td><td>D6</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="notice"><strong>Atenção:</strong> VCC deve ser ligado ao 5V e GND ao GND. Nunca conecte 5V/VCC diretamente ao GND. Faça a conferência do circuito com o Arduino desconectado do USB.</div>
+      </div>
+    </section>
+
+    <section id="funcionamento">
+      <div class="wrap">
+        <div class="eyebrow">04 — Na prática</div>
+        <h2>Como funciona</h2>
+        <div class="steps">
+          <div class="step"><strong>Captação do som</strong><br><span class="intro">O microfone do KY-038 capta os sons do ambiente.</span></div>
+          <div class="step"><strong>Leitura analógica</strong><br><span class="intro">O Arduino lê o sinal recebido pela entrada A0.</span></div>
+          <div class="step"><strong>Processamento</strong><br><span class="intro">O código calcula a variação do sinal em pequenos intervalos.</span></div>
+          <div class="step"><strong>Indicação por LEDs</strong><br><span class="intro">Conforme a variação aumenta, mais LEDs são acesos.</span></div>
+        </div>
+        <div class="card" style="margin-top:22px">
+          <h3>Programação</h3>
+          <p>O código utiliza <code>analogRead()</code> para ler o sensor, calcula a diferença entre os valores máximo e mínimo e usa essa intensidade para determinar quantos LEDs devem acender. O Monitor Serial, configurado em 9600 baud, também mostra os valores medidos.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="equipe">
+      <div class="wrap">
+        <div class="eyebrow">05 — Integrantes</div>
+        <h2>Quem desenvolveu</h2>
+        <p class="intro">Projeto desenvolvido em equipe, explorando conceitos de eletrônica, programação e montagem de circuitos com Arduino.</p>
+        <div class="members">
+          <span class="member">Lucas</span><span class="member">Gabriel</span>
+          <span class="member">Maria Luiza</span><span class="member">Isabela</span>
+          <span class="member">Heloise</span>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap">Projeto escolar • Equalizador de Som com Arduino UNO e Sensor KY-038</div>
+  </footer>
+</body>
+</html>
